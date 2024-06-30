@@ -1,0 +1,196 @@
+import os
+import tkinter as tk
+from tkinter import filedialog, messagebox, StringVar, Toplevel
+import csv
+import tkinter.ttk as ttk
+import customtkinter as ctk  # Assuming this is a custom module you have
+
+# Set the theme (optional)
+ctk.set_appearance_mode("Light")  # Modes: "System" (default), "Dark", "Light"
+ctk.set_default_color_theme("green")  # Themes: "blue" (default), "green", "dark-blue"
+
+class App:
+    def __init__(self):
+        # Create the main application window
+        self.root = ctk.CTk()
+        self.root.title("Results")
+
+        # Initialize the main window directly
+        self.mainwin()
+
+        # Run the application
+        self.root.mainloop()
+
+    def mainwin(self):
+        # Frame for directory selection
+        directory_frame = ctk.CTkFrame(self.root)
+        directory_frame.pack(pady=10)
+        directory_label = ctk.CTkLabel(directory_frame, text="Directory:")
+        directory_label.grid(row=0, column=0)
+        self.directory_var = StringVar()
+        directory_entry = ctk.CTkEntry(directory_frame, textvariable=self.directory_var, width=500)
+        directory_entry.grid(row=0, column=1, padx=10)
+        browse_button = ctk.CTkButton(directory_frame, text="Search", command=self.browse_directory)
+        browse_button.grid(row=0, column=2)
+
+        # Frame for file type filter
+        filter_frame = ctk.CTkFrame(self.root)
+        filter_frame.pack(pady=10)
+        filetype_label = ctk.CTkLabel(filter_frame, text="Filetype:")
+        filetype_label.grid(row=0, column=0)
+        self.filetype_var = StringVar(value="")
+        filetype_entry = ctk.CTkEntry(filter_frame, textvariable=self.filetype_var, width=500)
+        filetype_entry.grid(row=0, column=1, padx=10)
+        apply_filter_button = ctk.CTkButton(filter_frame, text="Filter", command=self.apply_filter)
+        apply_filter_button.grid(row=0, column=2)
+
+        # Frame for race type filter
+        race_type_frame = ctk.CTkFrame(self.root)
+        race_type_frame.pack(pady=10)
+        race_type_label = ctk.CTkLabel(race_type_frame, text="Racetype:")
+        race_type_label.grid(row=0, column=0)
+        self.race_type_var = StringVar(value="")
+        race_type_entry = ctk.CTkEntry(race_type_frame, textvariable=self.race_type_var, width=500)
+        race_type_entry.grid(row=0, column=1, padx=10)
+        apply_race_filter_button = ctk.CTkButton(race_type_frame, text="Apply", command=self.apply_filter)
+        apply_race_filter_button.grid(row=0, column=2)
+
+        # Button to check files and assign points
+        check_files_button = ctk.CTkButton(self.root, text="Track", command=self.check_files_and_assign_points)
+        check_files_button.pack(pady=10)
+
+        # Label to display the analysis status
+        self.analysis_status_var = StringVar()
+        self.analysis_status_label = ctk.CTkLabel(self.root, textvariable=self.analysis_status_var, font=("Helvetica", 12))
+        self.analysis_status_label.pack(pady=10)
+
+    def browse_directory(self):
+        directory_path = filedialog.askdirectory()
+        if directory_path:
+            self.directory_var.set(directory_path)
+            self.update_file_list(directory_path)
+
+    def update_file_list(self, directory_path):
+        pass  # Remove file list updating logic
+
+    def apply_filter(self):
+        pass  # Remove file list updating logic
+
+    def assign_points(self, placement):
+        points_table = {
+            1: 8, 2: 7, 3: 6, 4: 5, 5: 4,
+            6: 3, 7: 2, 8: 1
+        }
+        return points_table.get(placement, 1)  # Minimum points is 1
+
+    def check_files_and_assign_points(self):
+        directory_path = self.directory_var.get()
+        racetype = self.race_type_var.get()
+        if not directory_path:
+            messagebox.showerror("Error", "No directory selected")
+            return
+
+        # Display folder and number of files
+        folder_name = os.path.basename(directory_path)
+        files = os.listdir(directory_path)
+        file_count = len(files)
+
+        # Initialize the analysis status
+        self.analysis_status_var.set(f"Analyzing {folder_name} {racetype} - 0/{file_count}")
+        self.root.update_idletasks()
+
+        club_points = {}
+
+        def analyze_file(idx):
+            if idx >= file_count:
+                # Finalize the analysis status
+                self.analysis_status_var.set(f"Analyzed {folder_name} {racetype} - {file_count}")
+                self.root.update_idletasks()
+                self.root.after(2000, lambda: self.display_results_and_export(club_points, directory_path))
+                return
+
+            filename = files[idx]
+            print(f"Analyzing file: {filename}")
+            if self.filetype_var.get().lower() in filename.lower() and racetype.lower() in filename.lower():
+                file_path = os.path.join(directory_path, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        lines = file.readlines()
+                except UnicodeDecodeError:
+                    try:
+                        with open(file_path, 'r', encoding='latin-1') as file:
+                            lines = file.readlines()
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Failed to read file {filename}: {e}")
+                        return
+
+                try:
+                    for i, line in enumerate(lines[1:]):  # Consider all lines after the header
+                        columns = line.split(',')
+                        if len(columns) > 5:
+                            placement = i + 1
+                            status = columns[3].strip()
+                            if status in ["DQ", "DNS"]:
+                                continue
+
+                            club_names = columns[5].strip().split(' and ')
+                            points = self.assign_points(placement)
+
+                            for club_name in club_names:
+                                club_points[club_name] = club_points.get(club_name, 0) + points
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to process file {filename}: {e}")
+                    return
+
+            # Update the analysis status
+            self.analysis_status_var.set(f"Analyzing {folder_name} {racetype} - {idx + 1}/{file_count}")
+            self.root.update_idletasks()
+
+            # Wait for a short period before analyzing the next file
+            self.root.after(100, lambda: analyze_file(idx + 1))
+
+        analyze_file(0)
+
+    def display_results_and_export(self, club_points, directory_path):
+        sorted_clubs = sorted(club_points.items(), key=lambda item: item[1], reverse=True)
+        self.display_results(sorted_clubs)
+        self.export_results_to_csv(sorted_clubs, directory_path)
+
+    def display_results(self, sorted_clubs):
+        results_window = Toplevel(self.root)
+        results_window.title("Club Points")
+
+        tree = ttk.Treeview(results_window, columns=("Points"))
+        tree.heading("#0", text="Club")
+        tree.heading("Points", text="Points")
+        tree.pack(expand=True, fill="both")
+
+        for club, points in sorted_clubs:
+            tree.insert("", "end", text=club, values=(points,))
+
+        # Adjust column widths
+        tree.column("#0", width=200)
+        tree.column("Points", width=100)
+
+        tree.config(selectmode="none")  # Disable selection
+
+        # Adjust window size based on content
+        results_window.geometry("300x400")
+
+        results_window.mainloop()
+
+    def export_results_to_csv(self, sorted_clubs, directory_path):
+        output_file = os.path.join(directory_path, "club_points.csv")
+        with open(output_file, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["Club", "Points"])
+            for club, points in sorted_clubs:
+                writer.writerow([club, points])
+
+    def toggle_theme(self):
+        current_mode = ctk.get_appearance_mode()
+        new_mode = "Dark" if current_mode == "Light" else "Light"
+        ctk.set_appearance_mode(new_mode)
+
+if __name__ == "__main__":
+    app = App()
