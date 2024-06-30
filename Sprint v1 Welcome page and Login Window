@@ -1,0 +1,98 @@
+import tkinter as tk
+import customtkinter as ctk  # Assuming this is a custom module you have
+
+class App:
+    def __init__(self):
+        # Create the welcome window
+        self.welcome_window = tk.Tk()
+        self.welcome_window.title("Welcome To The Waka-ama Tracker")
+
+        # Set the theme (optional)
+        ctk.set_appearance_mode("Light")  # Modes: "System" (default), "Dark", "Light"
+        ctk.set_default_color_theme("green")  # Themes: "blue" (default), "green", "dark-blue"
+
+        # Welcome label
+        welcome_label = ctk.CTkLabel(self.welcome_window, text="Welcome To The Waka-ama Tracker", font=("Helvetica", 16))
+        welcome_label.pack(pady=20)
+
+        # Login button (changed to ctk.CTkButton)
+        login_button = ctk.CTkButton(self.welcome_window, text="Login", command=self.open_login_window)
+        login_button.pack(pady=10)
+
+        # Toggle theme button
+        self.toggle_theme_button = ctk.CTkButton(self.welcome_window, text="Toggle Theme", command=self.toggle_theme)
+        self.toggle_theme_button.pack(pady=10)
+
+        # Run the application loop
+        self.welcome_window.mainloop()
+
+    def open_login_window(self):
+        # Destroy the welcome window
+        self.welcome_window.destroy()
+
+        # Create the main application window
+        self.root = ctk.CTk()
+        self.root.title("Results")
+        self.root.withdraw()  # Hide the main window initially
+
+        # Create the login window
+        self.login_window = ctk.CTkToplevel(self.root)
+        self.login_window.title("Waka-ama Login")
+
+        # Username label and entry
+        self.username_label = ctk.CTkLabel(self.login_window, text="Username:")
+        self.username_label.grid(row=0, column=0, padx=10, pady=10)
+        self.username_var = tk.StringVar()
+        self.username_entry = ctk.CTkEntry(self.login_window, textvariable=self.username_var)
+        self.username_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        # Password label and entry
+        self.password_label = ctk.CTkLabel(self.login_window, text="Password:")
+        self.password_label.grid(row=1, column=0, padx=10, pady=10)
+        self.password_var = tk.StringVar()
+        self.password_entry = ctk.CTkEntry(self.login_window, textvariable=self.password_var, show="*")
+        self.password_entry.grid(row=1, column=1, padx=10, pady=10)
+
+        # Login button (changed to ctk.CTkButton)
+        self.login_button = ctk.CTkButton(self.login_window, text="Enter", command=self.check_login)
+        self.login_button.grid(row=2, column=0, columnspan=2, pady=10)
+
+        # Toggle theme button
+        self.toggle_theme_button = ctk.CTkButton(self.login_window, text="Toggle Theme", command=self.toggle_theme)
+        self.toggle_theme_button.grid(row=3, column=0, columnspan=2, pady=10)
+
+        # Trials for user
+        self.trials = 0
+
+        # Username and password (for demonstration)
+        self.username = 'admin'
+        self.password = 'password'
+
+        # Run the application
+        self.root.mainloop()
+
+    def check_login(self):
+        if self.username_var.get() == self.username and self.password_var.get() == self.password:
+            self.login_window.destroy()
+            self.mainwin()
+        else:
+            self.trials += 1
+            if self.trials < 3:
+                ctk.messagebox.showerror("Error", "Invalid username or password")
+            else:
+                self.login_button.destroy()
+                trial_label = ctk.CTkLabel(self.login_window, text="Too many failed attempts")
+                trial_label.grid(row=2, column=0, columnspan=2, pady=10)
+
+    def mainwin(self):
+        self.root.deiconify()  # Show the main window
+
+        # Your main application logic here
+
+    def toggle_theme(self):
+        current_mode = ctk.get_appearance_mode()
+        new_mode = "Dark" if current_mode == "Light" else "Light"
+        ctk.set_appearance_mode(new_mode)
+
+if __name__ == "__main__":
+    app = App()
